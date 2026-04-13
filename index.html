@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Yuvadeepti SMYM Kollam – Expense Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- Firebase SDKs (compat v10) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* ============================================================
+   CSS VARIABLES & RESET
+   ============================================================ */
+:root {
+  --primary: #1a56db;
+  --primary-light: #ebf0ff;
+  --primary-dark: #1340a8;
+  --gold: #d4a017;
+  --gold-light: #fef9ec;
+  --success: #0e9f6e;
+  --success-light: #e8faf5;
+  --danger: #e02424;
+  --danger-light: #fdf2f2;
+  --warning: #f59e0b;
+  --bg: #f5f7fc;
+  --sidebar-bg: #0f1e45;
+  --sidebar-text: #a8b8d8;
+  --sidebar-active: #1a56db;
+  --card-bg: #ffffff;
+  --text-primary: #1a1f36;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,.10);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: .2s ease;
+  --sidebar-w: 250px;
+}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --card-bg: #161b22;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --border: #30363d;
+  --border-light: #21262d;
+  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+  --primary-light: #1a2744;
+  --gold-light: #2a1f00;
+  --success-light: #0a2a20;
+  --danger-light: #2a0a0a;
+  --sidebar-bg: #0d1117;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;transition:background var(--transition),color var(--transition)}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none}
+ul{list-style:none}
+
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--border-light)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ============================================================
+   LOADING SCREEN
+   ============================================================ */
+#loading-screen {
+  position:fixed;inset:0;
+  background:linear-gradient(135deg, #0f1e45 0%, #1a56db 60%, #1340a8 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;color:#fff;gap:16px;
+}
+.loading-logo {
+  width:72px;height:72px;border-radius:16px;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:700;margin-bottom:8px;
+}
+.loading-text{font-size:1.1rem;font-weight:600;opacity:.9}
+.loading-sub{font-size:.8rem;opacity:.6}
+.spinner{
+  width:36px;height:36px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .8s linear infinite;margin-top:8px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+#login-page {
+  min-height:100vh;display:none;
+  align-items:center;justify-content:center;
+  background: linear-gradient(135deg, #0f1e45 0%, #1a56db 60%, #1340a8 100%);
+  padding:20px;
+}
+#login-page.visible{display:flex}
+.login-card {
+  background:var(--card-bg);border-radius:20px;
+  padding:48px 40px;width:100%;max-width:420px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);animation:slideUp .4s ease;
+}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo .logo-box{
+  width:72px;height:72px;border-radius:16px;
+  background:linear-gradient(135deg,#1a56db,#d4a017);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:28px;color:#fff;font-weight:700;margin-bottom:12px;
+  box-shadow:0 8px 24px rgba(26,86,219,.3);
+}
+.login-logo h1{font-size:1.1rem;font-weight:700;color:var(--text-primary);line-height:1.3}
+.login-logo p{font-size:.8rem;color:var(--text-secondary);margin-top:4px}
+.login-form h2{font-size:1.3rem;font-weight:600;margin-bottom:6px}
+.login-form p{font-size:.85rem;color:var(--text-secondary);margin-bottom:28px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.82rem;font-weight:500;color:var(--text-primary);margin-bottom:8px}
+.input-wrap{position:relative}
+.input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.85rem}
+.form-group input{
+  width:100%;padding:12px 14px 12px 40px;
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--text-primary);font-size:.9rem;
+  transition:border var(--transition),box-shadow var(--transition);
+}
+.form-group input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);cursor:pointer;font-size:.85rem}
+.login-btn{
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,#1a56db,#1340a8);
+  color:#fff;font-size:.95rem;font-weight:600;
+  border-radius:var(--radius-sm);margin-top:8px;
+  transition:opacity var(--transition),transform var(--transition);
+  box-shadow:0 4px 14px rgba(26,86,219,.3);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.login-btn:hover{opacity:.92;transform:translateY(-1px)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.login-error{
+  background:var(--danger-light);color:var(--danger);
+  padding:10px 14px;border-radius:var(--radius-sm);
+  font-size:.82rem;margin-bottom:16px;display:none;
+  border:1px solid rgba(224,36,36,.2);
+}
+.login-error.show{display:block}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+#app{display:none;min-height:100vh}
+#app.visible{display:flex}
+
+.sidebar {
+  width:var(--sidebar-w);background:var(--sidebar-bg);min-height:100vh;
+  display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;
+  z-index:200;transition:transform var(--transition);
+}
+.sidebar-header{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sidebar-brand{display:flex;align-items:center;gap:12px}
+.brand-logo{
+  width:40px;height:40px;border-radius:10px;
+  background:linear-gradient(135deg,#1a56db,#d4a017);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#fff;font-weight:700;flex-shrink:0;
+}
+.brand-text{font-size:.78rem;font-weight:600;color:#fff;line-height:1.3}
+.brand-sub{font-size:.68rem;color:var(--sidebar-text);margin-top:2px}
+.sidebar-nav{padding:16px 12px;flex:1;overflow-y:auto}
+.nav-section-title{
+  font-size:.65rem;font-weight:600;color:rgba(168,184,216,.5);
+  text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin:16px 0 8px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:var(--radius-sm);
+  color:var(--sidebar-text);font-size:.85rem;font-weight:500;
+  cursor:pointer;margin-bottom:2px;
+  transition:background var(--transition),color var(--transition);
+}
+.nav-item i{width:18px;text-align:center;font-size:.9rem}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(26,86,219,.4)}
+.nav-item .badge{margin-left:auto;background:var(--gold);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:20px}
+.sidebar-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.07)}
+.user-card{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--radius-sm);background:rgba(255,255,255,.05);
+}
+.user-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#1a56db,#d4a017);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;color:#fff;font-weight:600;flex-shrink:0;
+}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:.82rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:.68rem;color:var(--sidebar-text)}
+.logout-btn{
+  color:var(--sidebar-text);background:none;padding:4px;border-radius:4px;
+  transition:color var(--transition);font-size:.9rem;
+}
+.logout-btn:hover{color:#e02424}
+
+.main-wrap{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{
+  background:var(--card-bg);border-bottom:1px solid var(--border);
+  padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06);
+}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.menu-toggle{display:none;background:none;color:var(--text-primary);font-size:1.2rem;padding:4px}
+.topbar-title h2{font-size:1rem;font-weight:600}
+.topbar-title p{font-size:.75rem;color:var(--text-secondary)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar-btn{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--text-secondary);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.9rem;transition:all var(--transition);border:1px solid var(--border);
+}
+.topbar-btn:hover{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+.year-select{
+  padding:6px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text-primary);font-size:.82rem;font-weight:500;
+}
+
+/* Firebase status indicator */
+.sync-indicator{
+  display:flex;align-items:center;gap:6px;
+  font-size:.72rem;color:var(--text-muted);
+}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted)}
+.sync-dot.live{background:var(--success);animation:pulse 2s infinite}
+.sync-dot.error{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.page-content{padding:28px;flex:1;animation:fadeIn .3s ease}
+.page{display:none}
+.page.active{display:block}
+
+/* ============================================================
+   CARDS & STAT WIDGETS
+   ============================================================ */
+.card{background:var(--card-bg);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{
+  background:var(--card-bg);border-radius:var(--radius);padding:22px 24px;
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:16px;
+  transition:transform var(--transition),box-shadow var(--transition);
+}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.stat-icon.blue{background:var(--primary-light);color:var(--primary)}
+.stat-icon.gold{background:var(--gold-light);color:var(--gold)}
+.stat-icon.green{background:var(--success-light);color:var(--success)}
+.stat-icon.red{background:var(--danger-light);color:var(--danger)}
+.stat-info{flex:1;min-width:0}
+.stat-label{font-size:.75rem;color:var(--text-secondary);font-weight:500;margin-bottom:4px}
+.stat-value{font-size:1.4rem;font-weight:700;color:var(--text-primary)}
+.stat-sub{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:1rem;font-weight:600}
+.section-sub{font-size:.78rem;color:var(--text-secondary);margin-top:2px}
+
+.months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.month-card{
+  background:var(--card-bg);border-radius:var(--radius);padding:18px 16px;
+  box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;
+  transition:all var(--transition);
+}
+.month-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--primary)}
+.month-card.current-month{border-color:var(--primary);background:var(--primary-light)}
+.month-name{font-size:.85rem;font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.month-name .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.month-stat{font-size:.72rem;color:var(--text-secondary);margin-bottom:3px}
+.month-balance{font-size:.95rem;font-weight:700;margin-top:8px}
+.month-balance.pos{color:var(--success)}
+.month-balance.neg{color:var(--danger)}
+
+.chart-wrap{position:relative;height:280px}
+
+.table-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.filter-input{
+  padding:8px 14px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border);background:var(--bg);
+  color:var(--text-primary);font-size:.82rem;
+  transition:border var(--transition);flex:1;min-width:140px;
+}
+.filter-input:focus{border-color:var(--primary)}
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead th{
+  background:var(--border-light);padding:12px 16px;text-align:left;font-weight:600;
+  font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;
+  letter-spacing:.04em;white-space:nowrap;cursor:pointer;user-select:none;
+}
+thead th:hover{color:var(--primary)}
+thead th .sort-icon{margin-left:4px;opacity:.5}
+tbody tr{border-top:1px solid var(--border);transition:background var(--transition)}
+tbody tr:hover{background:var(--border-light)}
+tbody td{padding:12px 16px;color:var(--text-primary);vertical-align:middle}
+.type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:500}
+.type-badge.expense{background:var(--danger-light);color:var(--danger)}
+.type-badge.credit{background:var(--success-light);color:var(--success)}
+.category-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:500;background:var(--primary-light);color:var(--primary)}
+.action-btns{display:flex;gap:6px}
+.action-btn{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all var(--transition)}
+.action-btn.edit{background:var(--primary-light);color:var(--primary)}
+.action-btn.edit:hover{background:var(--primary);color:#fff}
+.action-btn.delete{background:var(--danger-light);color:var(--danger)}
+.action-btn.delete:hover{background:var(--danger);color:#fff}
+.amount-exp{color:var(--danger);font-weight:600}
+.amount-cred{color:var(--success);font-weight:600}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;display:block;opacity:.4}
+.empty-state p{font-size:.85rem}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:var(--radius-sm);font-size:.85rem;font-weight:500;transition:all var(--transition)}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(26,86,219,.25)}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px)}
+.btn-outline{background:var(--card-bg);color:var(--text-primary);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{opacity:.9}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{opacity:.9}
+.btn-sm{padding:6px 12px;font-size:.78rem}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity var(--transition);backdrop-filter:blur(4px);
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--card-bg);border-radius:16px;width:100%;max-width:520px;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);transform:scale(.95) translateY(20px);
+  transition:transform .25s ease;max-height:90vh;overflow-y:auto;
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px}
+.modal-title{font-size:1rem;font-weight:600}
+.modal-close{width:32px;height:32px;border-radius:8px;background:var(--bg);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.modal-close:hover{background:var(--danger-light);color:var(--danger)}
+.modal-body{padding:24px}
+.modal-footer{padding:0 24px 24px;display:flex;gap:10px;justify-content:flex-end}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-field{margin-bottom:16px}
+.form-field label{display:block;font-size:.8rem;font-weight:500;color:var(--text-primary);margin-bottom:6px}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--text-primary);font-size:.85rem;
+  transition:border var(--transition),box-shadow var(--transition);
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.form-field textarea{resize:vertical;min-height:70px}
+.type-toggle{display:flex;gap:8px}
+.type-btn{flex:1;padding:10px;border-radius:var(--radius-sm);font-size:.83rem;font-weight:500;border:2px solid var(--border);background:var(--bg);color:var(--text-secondary);transition:all var(--transition)}
+.type-btn.active-expense{border-color:var(--danger);background:var(--danger-light);color:var(--danger)}
+.type-btn.active-credit{border-color:var(--success);background:var(--success-light);color:var(--success)}
+
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:var(--card-bg);border-radius:var(--radius-sm);padding:12px 18px;
+  display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-md);
+  border-left:4px solid var(--primary);font-size:.83rem;font-weight:500;
+  color:var(--text-primary);animation:toastIn .3s ease;min-width:260px;max-width:320px;
+}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.warning{border-left-color:var(--warning)}
+.toast i{font-size:1rem}
+.toast.success i{color:var(--success)}
+.toast.error i{color:var(--danger)}
+
+.pagination{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:16px}
+.page-btn{
+  width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;font-weight:500;background:var(--bg);color:var(--text-secondary);
+  border:1px solid var(--border);transition:all var(--transition);
+}
+.page-btn:hover,.page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px}
+.admin-card{background:var(--card-bg);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.admin-card h3{font-size:.9rem;font-weight:600;margin-bottom:4px}
+.admin-card p{font-size:.78rem;color:var(--text-secondary);margin-bottom:16px}
+
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.show{display:block}
+  .main-wrap{margin-left:0}
+  .menu-toggle{display:flex}
+  .form-row{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .months-grid{grid-template-columns:repeat(3,1fr)}
+  #dash-main-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:560px){
+  .page-content{padding:16px}
+  .stat-grid{grid-template-columns:1fr}
+  .months-grid{grid-template-columns:1fr 1fr}
+  .topbar{padding:0 16px}
+  .table-filters{flex-direction:column}
+}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.fade-in{animation:fadeIn .35s ease}
+
+.month-summary-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.month-stat-pill{flex:1;min-width:140px;background:var(--card-bg);border-radius:var(--radius-sm);padding:14px 18px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.month-stat-pill .label{font-size:.72rem;color:var(--text-secondary);font-weight:500}
+.month-stat-pill .value{font-size:1.1rem;font-weight:700;margin-top:2px}
+
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-wrap i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.8rem}
+.search-input{padding-left:34px!important}
+
+.progress-bar-wrap{background:var(--border-light);border-radius:4px;height:6px;margin-top:6px}
+.progress-bar{height:6px;border-radius:4px;background:var(--primary);transition:width .5s ease}
+.progress-bar.red{background:var(--danger)}
+.progress-bar.green{background:var(--success)}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="loading-logo">YS</div>
+  <div class="loading-text">Yuvadeepti SMYM Kollam</div>
+  <div class="loading-sub">Connecting to Firebase…</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-box">YS</div>
+      <h1>Yuvadeepti SMYM Kollam</h1>
+      <p>Expense & Credit Tracker</p>
+    </div>
+    <div class="login-form">
+      <h2>Welcome back</h2>
+      <p>Sign in to access your financial dashboard</p>
+      <div class="login-error" id="login-error"><i class="fas fa-exclamation-circle"></i> <span id="login-error-msg"></span></div>
+      <div class="form-group">
+        <label>Email</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="login-user" placeholder="Enter your email" autocomplete="email"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"/>
+          <span class="toggle-pw" onclick="togglePw()"><i class="fas fa-eye" id="pw-eye"></i></span>
+        </div>
+      </div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+      <p style="font-size:.72rem;color:var(--text-muted)">
+        Use your Firebase email & password to sign in.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR OVERLAY (MOBILE) -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="brand-logo">YS</div>
+        <div>
+          <div class="brand-text">Yuvadeepti SMYM</div>
+          <div class="brand-sub">Kollam Tracker</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <i class="fas fa-th-large"></i> Dashboard
+      </div>
+      <div class="nav-item" onclick="navigate('monthly')">
+        <i class="fas fa-calendar-alt"></i> Monthly View
+      </div>
+      <div class="nav-item" onclick="navigate('transactions')">
+        <i class="fas fa-exchange-alt"></i> All Transactions
+      </div>
+      <div class="nav-item" onclick="openAddModal()">
+        <i class="fas fa-plus-circle"></i> Add Entry
+        <span class="badge">+</span>
+      </div>
+      <div class="nav-section-title">Reports</div>
+      <div class="nav-item" onclick="navigate('admin')">
+        <i class="fas fa-chart-bar"></i> Reports & Export
+      </div>
+      <div id="admin-nav" class="nav-item" onclick="navigate('users')" style="display:none">
+        <i class="fas fa-users-cog"></i> Manage Users
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="user-display-name">Loading…</div>
+          <div class="user-role" id="user-role-label">User</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="topbar-title">
+          <h2 id="page-title">Dashboard</h2>
+          <p id="page-sub">Overview of your financial data</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <!-- Live sync indicator -->
+        <div class="sync-indicator" id="sync-indicator">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="sync-label">Connecting…</span>
+        </div>
+        <select class="year-select" id="year-select" onchange="changeYear()">
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+        </select>
+        <button class="topbar-btn" onclick="toggleDark()" title="Toggle Dark Mode">
+          <i class="fas fa-moon" id="dark-icon"></i>
+        </button>
+        <button class="topbar-btn btn-primary" style="width:auto;padding:0 14px;gap:6px;font-size:.8rem;font-weight:500;color:#fff" onclick="openAddModal()">
+          <i class="fas fa-plus"></i> Add Entry
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- DASHBOARD PAGE -->
+      <div class="page active" id="page-dashboard">
+        <div class="stat-grid" id="dash-stats"></div>
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;margin-bottom:24px" id="dash-main-grid">
+          <div class="card">
+            <div class="section-header">
+              <div>
+                <div class="section-title">Monthly Overview</div>
+                <div class="section-sub">Credits vs Expenses across the year</div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-sm btn-outline" onclick="setChartType('bar')"><i class="fas fa-chart-bar"></i></button>
+                <button class="btn btn-sm btn-outline" onclick="setChartType('line')"><i class="fas fa-chart-line"></i></button>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-header">
+              <div class="section-title">Category Breakdown</div>
+            </div>
+            <div style="position:relative;height:220px"><canvas id="cat-chart"></canvas></div>
+            <div id="cat-legend" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:.75rem"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Monthly Summary</div>
+              <div class="section-sub">Click a month to view details</div>
+            </div>
+          </div>
+          <div class="months-grid" id="months-grid"></div>
+        </div>
+      </div>
+
+      <!-- MONTHLY VIEW PAGE -->
+      <div class="page" id="page-monthly">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+          <select class="filter-input" id="month-select" onchange="renderMonthly()" style="max-width:160px"></select>
+          <span style="font-size:.82rem;color:var(--text-secondary)">Select a month to view all entries</span>
+        </div>
+        <div class="month-summary-bar" id="month-summary-bar"></div>
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title" id="monthly-title">January Entries</div>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="table-filters">
+            <div class="search-wrap">
+              <i class="fas fa-search"></i>
+              <input class="filter-input search-input" id="monthly-search" placeholder="Search entries…" oninput="renderMonthlyTable()"/>
+            </div>
+            <select class="filter-input" id="monthly-cat-filter" onchange="renderMonthlyTable()" style="max-width:150px">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th onclick="sortTable('monthly','date')">Date <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('monthly','description')">Description <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('monthly','category')">Category <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('monthly','type')">Type <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('monthly','amount')">Amount <span class="sort-icon">↕</span></th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-tbody"></tbody>
+            </table>
+          </div>
+          <div id="monthly-pagination" class="pagination"></div>
+        </div>
+      </div>
+
+      <!-- ALL TRANSACTIONS PAGE -->
+      <div class="page" id="page-transactions">
+        <div class="card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">All Transactions</div>
+              <div class="section-sub" id="tx-count-label"></div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm btn-outline" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+              <button class="btn btn-sm btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Add</button>
+            </div>
+          </div>
+          <div class="table-filters">
+            <div class="search-wrap">
+              <i class="fas fa-search"></i>
+              <input class="filter-input search-input" id="tx-search" placeholder="Search all transactions…" oninput="renderTransactions()"/>
+            </div>
+            <select class="filter-input" id="tx-month-filter" onchange="renderTransactions()" style="max-width:130px">
+              <option value="">All Months</option>
+            </select>
+            <select class="filter-input" id="tx-type-filter" onchange="renderTransactions()" style="max-width:130px">
+              <option value="">All Types</option>
+              <option value="expense">Expense</option>
+              <option value="credit">Credit</option>
+            </select>
+            <select class="filter-input" id="tx-cat-filter" onchange="renderTransactions()" style="max-width:140px">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th onclick="sortTable('tx','date')">Date <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('tx','description')">Description <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('tx','category')">Category <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('tx','type')">Type <span class="sort-icon">↕</span></th>
+                  <th onclick="sortTable('tx','amount')">Amount <span class="sort-icon">↕</span></th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tx-tbody"></tbody>
+            </table>
+          </div>
+          <div id="tx-pagination" class="pagination"></div>
+        </div>
+      </div>
+
+      <!-- REPORTS & ADMIN PAGE -->
+      <div class="page" id="page-admin">
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h3><i class="fas fa-file-csv" style="color:var(--success);margin-right:6px"></i> Export CSV</h3>
+            <p>Download all transactions as a CSV spreadsheet file.</p>
+            <button class="btn btn-success" onclick="exportCSV()"><i class="fas fa-download"></i> Download CSV</button>
+          </div>
+          <div class="admin-card">
+            <h3><i class="fas fa-file-code" style="color:var(--primary);margin-right:6px"></i> Export JSON</h3>
+            <p>Export raw data as JSON for backup or migration.</p>
+            <button class="btn btn-primary" onclick="exportJSON()"><i class="fas fa-download"></i> Download JSON</button>
+          </div>
+          <div class="admin-card">
+            <h3><i class="fas fa-upload" style="color:var(--gold);margin-right:6px"></i> Import JSON</h3>
+            <p>Restore data from a previously exported JSON backup.</p>
+            <input type="file" id="import-file" accept=".json" onchange="importJSON(event)" style="display:none"/>
+            <button class="btn btn-gold" onclick="document.getElementById('import-file').click()"><i class="fas fa-upload"></i> Import</button>
+          </div>
+          <div class="admin-card">
+            <h3><i class="fas fa-trash-alt" style="color:var(--danger);margin-right:6px"></i> Clear All Data</h3>
+            <p>Remove all transactions permanently. Cannot be undone.</p>
+            <button class="btn btn-danger" onclick="confirmClearAll()"><i class="fas fa-trash"></i> Clear All</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-header"><div class="section-title">Expense by Category</div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Category</th><th>Entries</th><th>Total Expense</th><th>Total Credit</th><th>Net</th></tr></thead>
+              <tbody id="cat-report-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" id="audit-card">
+          <div class="section-header">
+            <div class="section-title">Audit Log</div>
+            <button class="btn btn-sm btn-outline" onclick="clearAuditLog()"><i class="fas fa-trash"></i> Clear</button>
+          </div>
+          <div id="audit-log-list" style="font-size:.78rem;max-height:260px;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <!-- USERS PAGE -->
+      <div class="page" id="page-users">
+        <div class="card" style="max-width:600px">
+          <div class="section-header">
+            <div class="section-title">Firebase Users</div>
+          </div>
+          <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:16px">
+            User management is handled via the <strong>Firebase Authentication console</strong>.
+            Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
+            → your project → Authentication → Users to add or remove users.
+          </p>
+          <div style="background:var(--border-light);border-radius:var(--radius-sm);padding:16px;font-size:.82rem;color:var(--text-secondary)">
+            <i class="fas fa-info-circle" style="color:var(--primary);margin-right:6px"></i>
+            Currently signed in as: <strong id="current-user-email">—</strong>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-wrap -->
+</div><!-- /app -->
+
+<!-- ADD/EDIT TRANSACTION MODAL -->
+<div class="modal-overlay" id="tx-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add Transaction</div>
+      <button class="modal-close" onclick="closeModal('tx-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id"/>
+      <div class="form-field">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button class="type-btn active-expense" id="btn-expense" onclick="setType('expense')">
+            <i class="fas fa-arrow-down"></i> Expense
+          </button>
+          <button class="type-btn" id="btn-credit" onclick="setType('credit')">
+            <i class="fas fa-arrow-up"></i> Credit
+          </button>
+        </div>
+        <input type="hidden" id="tx-type" value="expense"/>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Date *</label>
+          <input type="date" id="tx-date"/>
+        </div>
+        <div class="form-field">
+          <label>Amount (₹) *</label>
+          <input type="number" id="tx-amount" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Category *</label>
+          <select id="tx-category">
+            <option value="">Select category…</option>
+            <option>Food & Catering</option>
+            <option>Transport</option>
+            <option>Event / Program</option>
+            <option>Stationery</option>
+            <option>Donation</option>
+            <option>Utility</option>
+            <option>Membership Fee</option>
+            <option>Miscellaneous</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Description *</label>
+          <input type="text" id="tx-desc" placeholder="Brief description…"/>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Notes (optional)</label>
+        <textarea id="tx-notes" placeholder="Additional notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('tx-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveTx()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fas fa-exclamation-triangle" style="color:var(--warning);margin-right:8px"></i>Confirm</div>
+      <button class="modal-close" onclick="closeModal('confirm-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="font-size:.88rem;color:var(--text-secondary)"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+// FIREBASE INIT
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBzrBFRYMQ08QqW464yhl6NqmzAmUHlotw",
+  authDomain: "smymkollam-expense-tracker.firebaseapp.com",
+  databaseURL: "https://smymkollam-expense-tracker-default-rtdb.firebaseio.com",
+  projectId: "smymkollam-expense-tracker",
+  storageBucket: "smymkollam-expense-tracker.firebasestorage.app",
+  messagingSenderId: "61583125148",
+  appId: "1:61583125148:web:f698771c9912929688db59",
+  measurementId: "G-7LK8W853PD"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// Enable offline persistence so the app works even without internet
+db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+// ============================================================
+// STATE
+// ============================================================
+const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let state = {
+  currentUser   : null,
+  currentPage   : 'dashboard',
+  selectedYear  : new Date().getFullYear(),
+  selectedMonth : new Date().getMonth(),
+  transactions  : [],          // kept in sync by Firestore onSnapshot
+  auditLog      : [],
+  dark          : false,
+  sortConfig    : { tx:{ key:'date', dir:'desc' }, monthly:{ key:'date', dir:'desc' } },
+  pagination    : { tx:1, monthly:1 },
+  pageSize      : 12,
+  chart         : null,
+  catChart      : null,
+  unsubscribe   : null         // Firestore listener cleanup
+};
+
+// ============================================================
+// DARK MODE — persist to Firestore user prefs (optional) or localStorage
+// ============================================================
+function loadDarkPref() {
+  const d = localStorage.getItem('ys_dark');
+  if (d === 'true') { state.dark = true; document.documentElement.setAttribute('data-theme','dark'); document.getElementById('dark-icon').classList.replace('fa-moon','fa-sun'); }
+}
+loadDarkPref();
+
+// ============================================================
+// FIREBASE AUTH — onAuthStateChanged is the single entry point
+// ============================================================
+auth.onAuthStateChanged(user => {
+  document.getElementById('loading-screen').style.display = 'none';
+
+  if (user) {
+    state.currentUser = { uid: user.uid, email: user.email, username: user.email.split('@')[0] };
+    showApp();
+    startFirestoreListener();
+  } else {
+    stopFirestoreListener();
+    showLoginPage();
+  }
+});
+
+function showLoginPage() {
+  document.getElementById('login-page').classList.add('visible');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('app').style.display = 'none';
+  setSyncStatus('disconnected');
+}
+
+function showApp() {
+  document.getElementById('login-page').classList.remove('visible');
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  app.classList.add('visible');
+
+  const u = state.currentUser;
+  document.getElementById('user-avatar').textContent       = u.username[0].toUpperCase();
+  document.getElementById('user-display-name').textContent = u.username;
+  document.getElementById('user-role-label').textContent   = 'Member';
+  document.getElementById('current-user-email').textContent = u.email;
+
+  // Admin nav only for a specific email (change to yours)
+  const isAdmin = true; // Set to: u.email === 'admin@yourdomain.com' to restrict
+  document.getElementById('admin-nav').style.display = isAdmin ? 'flex' : 'none';
+
+  buildMonthSelect();
+  buildFilterSelects();
+  navigate('dashboard');
+}
+
+// ============================================================
+// LOGIN / LOGOUT
+// ============================================================
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showLoginError('Please enter your email and password.'); return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+  hideLoginError();
+
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    let msg = 'Sign-in failed. Please check your credentials.';
+    if (e.code === 'auth/user-not-found')    msg = 'No account found with this email.';
+    if (e.code === 'auth/wrong-password')    msg = 'Incorrect password. Please try again.';
+    if (e.code === 'auth/invalid-email')     msg = 'Please enter a valid email address.';
+    if (e.code === 'auth/too-many-requests') msg = 'Too many failed attempts. Try again later.';
+    showLoginError(msg);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+  }
+}
+
+async function doLogout() {
+  await auth.signOut();
+  auditLogLocal('logout', 'User signed out');
+}
+
+function showLoginError(msg) {
+  document.getElementById('login-error-msg').textContent = msg;
+  document.getElementById('login-error').classList.add('show');
+}
+function hideLoginError() { document.getElementById('login-error').classList.remove('show'); }
+function togglePw() {
+  const inp = document.getElementById('login-pass');
+  const eye = document.getElementById('pw-eye');
+  if (inp.type === 'password') { inp.type = 'text'; eye.classList.replace('fa-eye','fa-eye-slash'); }
+  else { inp.type = 'password'; eye.classList.replace('fa-eye-slash','fa-eye'); }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-page').classList.contains('visible')) doLogin();
+});
+
+// ============================================================
+// FIRESTORE REAL-TIME LISTENER
+// ============================================================
+function startFirestoreListener() {
+  if (state.unsubscribe) state.unsubscribe();
+  setSyncStatus('connecting');
+
+  state.unsubscribe = db.collection('transactions')
+    .onSnapshot(
+      snapshot => {
+        state.transactions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setSyncStatus('live');
+        refreshAll();
+      },
+      err => {
+        console.error('Firestore error:', err);
+        setSyncStatus('error');
+        showToast('Sync error — check connection', 'error', 'fa-exclamation-triangle');
+      }
+    );
+}
+
+function stopFirestoreListener() {
+  if (state.unsubscribe) { state.unsubscribe(); state.unsubscribe = null; }
+}
+
+function setSyncStatus(status) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (!dot) return;
+  dot.className = 'sync-dot';
+  if (status === 'live')         { dot.classList.add('live'); label.textContent = 'Live'; }
+  else if (status === 'error')   { dot.classList.add('error'); label.textContent = 'Error'; }
+  else if (status === 'connecting') { label.textContent = 'Connecting…'; }
+  else                           { label.textContent = 'Offline'; }
+}
+
+// ============================================================
+// FIRESTORE CRUD
+// ============================================================
+async function saveTxToFirestore(tx) {
+  const { id, ...data } = tx;
+  await db.collection('transactions').doc(id).set({
+    ...data,
+    savedBy: state.currentUser.email,
+    savedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function updateTxInFirestore(id, updates) {
+  await db.collection('transactions').doc(id).update({
+    ...updates,
+    updatedBy: state.currentUser.email,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function deleteTxFromFirestore(id) {
+  await db.collection('transactions').doc(id).delete();
+}
+
+async function saveAuditToFirestore(entry) {
+  try {
+    await db.collection('auditLog').add({
+      ...entry,
+      userEmail: state.currentUser ? state.currentUser.email : 'unknown',
+      serverTime: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { /* audit failures are non-critical */ }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+const PAGE_META = {
+  dashboard:    { title: 'Dashboard',         sub: 'Overview of your financial data' },
+  monthly:      { title: 'Monthly View',       sub: 'Detailed view by month' },
+  transactions: { title: 'All Transactions',   sub: 'Browse, search and filter entries' },
+  admin:        { title: 'Reports & Export',   sub: 'Analytics, backup and restore' },
+  users:        { title: 'Account Info',       sub: 'Firebase authentication details' }
+};
+
+function navigate(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+  // Set active nav item by matching text
+  const titles = { dashboard:'Dashboard', monthly:'Monthly', transactions:'All Transactions', admin:'Reports', users:'Account' };
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.textContent.trim().startsWith(titles[page] || '')) el.classList.add('active');
+  });
+
+  const meta = PAGE_META[page] || {};
+  document.getElementById('page-title').textContent = meta.title || page;
+  document.getElementById('page-sub').textContent   = meta.sub   || '';
+  closeSidebar();
+  renderPage(page);
+}
+
+function renderPage(page) {
+  if (page === 'dashboard')    renderDashboard();
+  if (page === 'monthly')      renderMonthly();
+  if (page === 'transactions') renderTransactions();
+  if (page === 'admin')        renderAdmin();
+}
+function refreshAll() { renderPage(state.currentPage); }
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+
+// ============================================================
+// DARK MODE
+// ============================================================
+function toggleDark() {
+  state.dark = !state.dark;
+  localStorage.setItem('ys_dark', state.dark);
+  if (state.dark) {
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('dark-icon').classList.replace('fa-moon','fa-sun');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('dark-icon').classList.replace('fa-sun','fa-moon');
+  }
+  renderCharts();
+}
+
+// ============================================================
+// YEAR CHANGE
+// ============================================================
+function changeYear() {
+  state.selectedYear = parseInt(document.getElementById('year-select').value);
+  buildMonthSelect();
+  buildFilterSelects();
+  renderPage(state.currentPage);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function txYear(tx)  { return new Date(tx.date).getFullYear(); }
+function txMonth(tx) { return new Date(tx.date).getMonth(); }
+function yearTx()    { return state.transactions.filter(t => txYear(t) === state.selectedYear); }
+function monthTx(m)  { return state.transactions.filter(t => txYear(t) === state.selectedYear && txMonth(t) === m); }
+function calcStats(txs) {
+  const credits  = txs.filter(t=>t.type==='credit').reduce((s,t)=>s+Number(t.amount),0);
+  const expenses = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0);
+  return { credits, expenses, balance: credits - expenses };
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const txs = yearTx();
+  const { credits, expenses, balance } = calcStats(txs);
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="fas fa-wallet"></i></div>
+      <div class="stat-info">
+        <div class="stat-label">Current Balance</div>
+        <div class="stat-value" style="color:${balance>=0?'var(--success)':'var(--danger)'}">${fmt(balance)}</div>
+        <div class="stat-sub">Year ${state.selectedYear}</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-arrow-up"></i></div>
+      <div class="stat-info">
+        <div class="stat-label">Total Credits</div>
+        <div class="stat-value">${fmt(credits)}</div>
+        <div class="stat-sub">${txs.filter(t=>t.type==='credit').length} entries</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red"><i class="fas fa-arrow-down"></i></div>
+      <div class="stat-info">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value">${fmt(expenses)}</div>
+        <div class="stat-sub">${txs.filter(t=>t.type==='expense').length} entries</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon gold"><i class="fas fa-receipt"></i></div>
+      <div class="stat-info">
+        <div class="stat-label">Total Entries</div>
+        <div class="stat-value">${txs.length}</div>
+        <div class="stat-sub">All transactions</div>
+      </div>
+    </div>
+  `;
+
+  const now  = new Date();
+  document.getElementById('months-grid').innerHTML = MONTHS.map((m,i) => {
+    const mtx = monthTx(i);
+    const { credits:mc, expenses:me, balance:mb } = calcStats(mtx);
+    const isCurrent = state.selectedYear === now.getFullYear() && i === now.getMonth();
+    return `
+      <div class="month-card${isCurrent?' current-month':''}" onclick="goMonth(${i})">
+        <div class="month-name">${m}<div class="dot"></div></div>
+        <div class="month-stat"><i class="fas fa-arrow-up" style="color:var(--success);margin-right:4px;font-size:.65rem"></i>${fmt(mc)}</div>
+        <div class="month-stat"><i class="fas fa-arrow-down" style="color:var(--danger);margin-right:4px;font-size:.65rem"></i>${fmt(me)}</div>
+        <div class="month-balance ${mb>=0?'pos':'neg'}">${fmt(mb)}</div>
+        <div class="progress-bar-wrap"><div class="progress-bar${mb<0?' red':' green'}" style="width:${Math.min(100,mtx.length*8)}%"></div></div>
+      </div>
+    `;
+  }).join('');
+
+  renderCharts();
+}
+
+function goMonth(i) {
+  state.selectedMonth = i;
+  document.getElementById('month-select').value = i;
+  navigate('monthly');
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+let mainChartType = 'bar';
+function setChartType(t) { mainChartType = t; renderCharts(); }
+
+function renderCharts() {
+  const creditData  = MONTHS.map((_,i) => monthTx(i).filter(t=>t.type==='credit').reduce((s,t)=>s+Number(t.amount),0));
+  const expenseData = MONTHS.map((_,i) => monthTx(i).filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0));
+  const isDark = state.dark;
+  const gridColor  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+  const labelColor = isDark ? '#8b949e' : '#6b7280';
+
+  if (state.chart) state.chart.destroy();
+  state.chart = new Chart(document.getElementById('main-chart').getContext('2d'), {
+    type: mainChartType,
+    data: {
+      labels: MONTH_SHORT,
+      datasets: [
+        { label:'Credits',  data:creditData,  backgroundColor:mainChartType==='bar'?'rgba(14,159,110,.7)':'rgba(14,159,110,.15)', borderColor:'#0e9f6e', borderWidth:mainChartType==='line'?2:0, borderRadius:6, tension:.4, fill:mainChartType==='line', pointBackgroundColor:'#0e9f6e', pointRadius:mainChartType==='line'?4:0 },
+        { label:'Expenses', data:expenseData, backgroundColor:mainChartType==='bar'?'rgba(224,36,36,.65)':'rgba(224,36,36,.1)', borderColor:'#e02424', borderWidth:mainChartType==='line'?2:0, borderRadius:6, tension:.4, fill:mainChartType==='line', pointBackgroundColor:'#e02424', pointRadius:mainChartType==='line'?4:0 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{ labels:{ color:labelColor, font:{family:'Poppins',size:11}, boxWidth:12 } }, tooltip:{ callbacks:{ label:ctx=>' '+fmt(ctx.parsed.y) } } },
+      scales: { x:{ grid:{color:gridColor}, ticks:{color:labelColor,font:{family:'Poppins',size:11}} }, y:{ grid:{color:gridColor}, ticks:{color:labelColor,font:{family:'Poppins',size:11},callback:v=>'₹'+v.toLocaleString('en-IN')} } }
+    }
+  });
+
+  const catMap = {};
+  yearTx().filter(t=>t.type==='expense').forEach(t => { catMap[t.category]=(catMap[t.category]||0)+Number(t.amount); });
+  const cats = Object.keys(catMap), catVals = cats.map(c=>catMap[c]);
+  const COLORS = ['#1a56db','#d4a017','#0e9f6e','#e02424','#7c3aed','#f59e0b','#06b6d4','#ec4899'];
+
+  if (state.catChart) state.catChart.destroy();
+  state.catChart = new Chart(document.getElementById('cat-chart').getContext('2d'), {
+    type:'doughnut',
+    data: { labels:cats.length?cats:['No data'], datasets:[{ data:cats.length?catVals:[1], backgroundColor:cats.length?COLORS:['#e5e7eb'], borderWidth:0, hoverOffset:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed)}} }, cutout:'65%' }
+  });
+
+  const leg = document.getElementById('cat-legend');
+  if (cats.length) {
+    const total = catVals.reduce((a,b)=>a+b,0);
+    leg.innerHTML = cats.map((c,i) => `
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
+          <span style="color:var(--text-secondary)">${c}</span>
+        </div>
+        <span style="font-weight:500;color:var(--text-primary)">${Math.round(catVals[i]/total*100)}%</span>
+      </div>`).join('');
+  } else {
+    leg.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center">No expense data</div>';
+  }
+}
+
+// ============================================================
+// MONTHLY VIEW
+// ============================================================
+function buildMonthSelect() {
+  document.getElementById('month-select').innerHTML =
+    MONTHS.map((m,i) => `<option value="${i}"${i===state.selectedMonth?' selected':''}>${m} ${state.selectedYear}</option>`).join('');
+}
+
+function renderMonthly() {
+  state.selectedMonth = parseInt(document.getElementById('month-select').value);
+  const txs = monthTx(state.selectedMonth);
+  const { credits, expenses, balance } = calcStats(txs);
+  document.getElementById('monthly-title').textContent = MONTHS[state.selectedMonth] + ' ' + state.selectedYear + ' Entries';
+  document.getElementById('month-summary-bar').innerHTML = `
+    <div class="month-stat-pill"><div class="label">Total Credits</div><div class="value" style="color:var(--success)">${fmt(credits)}</div></div>
+    <div class="month-stat-pill"><div class="label">Total Expenses</div><div class="value" style="color:var(--danger)">${fmt(expenses)}</div></div>
+    <div class="month-stat-pill"><div class="label">Net Balance</div><div class="value" style="color:${balance>=0?'var(--success)':'var(--danger)'}">${fmt(balance)}</div></div>
+    <div class="month-stat-pill"><div class="label">Entries</div><div class="value">${txs.length}</div></div>
+  `;
+  buildCatFilter('monthly-cat-filter', txs);
+  renderMonthlyTable();
+}
+
+let sortMonthly = { key:'date', dir:'desc' };
+let sortTx      = { key:'date', dir:'desc' };
+
+function renderMonthlyTable() {
+  const search = document.getElementById('monthly-search').value.toLowerCase();
+  const catF   = document.getElementById('monthly-cat-filter').value;
+  let txs = monthTx(state.selectedMonth);
+  if (search) txs = txs.filter(t => t.description.toLowerCase().includes(search) || t.category.toLowerCase().includes(search));
+  if (catF)   txs = txs.filter(t => t.category === catF);
+  txs = sortArr(txs, sortMonthly);
+  renderTable('monthly-tbody', txs, 'monthly');
+  renderPagination('monthly-pagination', txs.length, state.pagination.monthly, p=>{ state.pagination.monthly=p; renderMonthlyTable(); });
+}
+
+function renderTransactions() {
+  const search  = document.getElementById('tx-search').value.toLowerCase();
+  const monthF  = document.getElementById('tx-month-filter').value;
+  const typeF   = document.getElementById('tx-type-filter').value;
+  const catF    = document.getElementById('tx-cat-filter').value;
+  let txs = yearTx();
+  if (search)     txs = txs.filter(t => t.description.toLowerCase().includes(search) || t.category.toLowerCase().includes(search) || (t.notes||'').toLowerCase().includes(search));
+  if (monthF!=='') txs = txs.filter(t => txMonth(t) === parseInt(monthF));
+  if (typeF)      txs = txs.filter(t => t.type === typeF);
+  if (catF)       txs = txs.filter(t => t.category === catF);
+  txs = sortArr(txs, sortTx);
+  document.getElementById('tx-count-label').textContent = `${txs.length} transactions found`;
+  renderTable('tx-tbody', txs, 'tx');
+  renderPagination('tx-pagination', txs.length, state.pagination.tx, p=>{ state.pagination.tx=p; renderTransactions(); });
+}
+
+function sortArr(arr, s) {
+  return [...arr].sort((a,b) => {
+    let va = a[s.key], vb = b[s.key];
+    if (s.key==='amount') { va=Number(va); vb=Number(vb); }
+    if (va<vb) return s.dir==='asc'?-1:1;
+    if (va>vb) return s.dir==='asc'?1:-1;
+    return 0;
+  });
+}
+
+function sortTable(tableId, key) {
+  const s = tableId==='tx' ? sortTx : sortMonthly;
+  if (s.key===key) s.dir = s.dir==='asc'?'desc':'asc'; else { s.key=key; s.dir='desc'; }
+  if (tableId==='tx') renderTransactions(); else renderMonthlyTable();
+}
+
+function renderTable(tbodyId, allRows, ctx) {
+  const page = state.pagination[ctx] || 1;
+  const rows = allRows.slice((page-1)*state.pageSize, page*state.pageSize);
+  const tbody = document.getElementById(tbodyId);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>No transactions found</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(t => `
+    <tr>
+      <td style="white-space:nowrap">${fmtDate(t.date)}</td>
+      <td>
+        <div style="font-weight:500">${escHtml(t.description)}</div>
+        ${t.notes?`<div style="font-size:.72rem;color:var(--text-muted)">${escHtml(t.notes)}</div>`:''}
+      </td>
+      <td><span class="category-tag">${escHtml(t.category)}</span></td>
+      <td><span class="type-badge ${t.type}"><i class="fas fa-arrow-${t.type==='credit'?'up':'down'}"></i>${t.type}</span></td>
+      <td class="${t.type==='expense'?'amount-exp':'amount-cred'}">${fmt(t.amount)}</td>
+      <td>
+        <div class="action-btns">
+          <button class="action-btn edit"   onclick="editTx('${t.id}')"   title="Edit"><i class="fas fa-pencil-alt"></i></button>
+          <button class="action-btn delete" onclick="deleteTx('${t.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderPagination(containerId, total, current, cb) {
+  const pages = Math.ceil(total / state.pageSize);
+  const el    = document.getElementById(containerId);
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="(${cb.toString()})(${Math.max(1,current-1)})" ${current===1?'disabled':''}><i class="fas fa-chevron-left"></i></button>`;
+  for (let i=1;i<=pages;i++) html += `<button class="page-btn${i===current?' active':''}" onclick="(${cb.toString()})(${i})">${i}</button>`;
+  html += `<button class="page-btn" onclick="(${cb.toString()})(${Math.min(pages,current+1)})" ${current===pages?'disabled':''}><i class="fas fa-chevron-right"></i></button>`;
+  el.innerHTML = html;
+}
+
+// ============================================================
+// ADMIN / REPORTS
+// ============================================================
+function renderAdmin() {
+  const cats = {};
+  yearTx().forEach(t => {
+    if (!cats[t.category]) cats[t.category] = { count:0, exp:0, cred:0 };
+    cats[t.category].count++;
+    if (t.type==='expense') cats[t.category].exp += Number(t.amount);
+    else cats[t.category].cred += Number(t.amount);
+  });
+  const tbody = document.getElementById('cat-report-tbody');
+  const entries = Object.entries(cats);
+  tbody.innerHTML = entries.length
+    ? entries.map(([cat,d]) => `
+        <tr>
+          <td><span class="category-tag">${escHtml(cat)}</span></td>
+          <td>${d.count}</td>
+          <td class="amount-exp">${fmt(d.exp)}</td>
+          <td class="amount-cred">${fmt(d.cred)}</td>
+          <td class="${d.cred-d.exp>=0?'amount-cred':'amount-exp'}">${fmt(d.cred-d.exp)}</td>
+        </tr>`).join('')
+    : `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-chart-bar"></i><p>No data for ${state.selectedYear}</p></div></td></tr>`;
+
+  // Audit log (Firestore)
+  db.collection('auditLog').orderBy('serverTime','desc').limit(50).get().then(snap => {
+    const logEl = document.getElementById('audit-log-list');
+    if (snap.empty) {
+      logEl.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No audit records yet</p></div>';
+      return;
+    }
+    logEl.innerHTML = snap.docs.map(d => {
+      const l = d.data();
+      const t = l.serverTime ? l.serverTime.toDate().toLocaleString('en-IN',{hour12:false}) : '—';
+      return `
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+          <span style="color:var(--text-muted);white-space:nowrap;font-size:.72rem">${t}</span>
+          <span style="color:var(--primary);font-weight:500;flex-shrink:0;font-size:.72rem">[${escHtml(l.action||'')}]</span>
+          <span style="color:var(--text-secondary);font-size:.72rem">${escHtml(l.msg||'')} <em style="color:var(--text-muted)">(${escHtml(l.userEmail||'')})</em></span>
+        </div>`;
+    }).join('');
+  }).catch(() => {});
+}
+
+async function clearAuditLog() {
+  const snap = await db.collection('auditLog').limit(100).get();
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+  renderAdmin();
+  showToast('Audit log cleared', 'success', 'fa-check');
+}
+
+// ============================================================
+// TRANSACTION CRUD
+// ============================================================
+function openAddModal() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('modal-title').textContent = 'Add Transaction';
+  document.getElementById('tx-date').value = todayStr();
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-category').value = '';
+  document.getElementById('tx-desc').value = '';
+  document.getElementById('tx-notes').value = '';
+  setType('expense');
+  openModal('tx-modal');
+}
+
+function editTx(id) {
+  const t = state.transactions.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('modal-title').textContent = 'Edit Transaction';
+  document.getElementById('tx-date').value = t.date;
+  document.getElementById('tx-amount').value = t.amount;
+  document.getElementById('tx-category').value = t.category;
+  document.getElementById('tx-desc').value = t.description;
+  document.getElementById('tx-notes').value = t.notes || '';
+  setType(t.type);
+  openModal('tx-modal');
+}
+
+async function saveTx() {
+  const date     = document.getElementById('tx-date').value;
+  const amount   = parseFloat(document.getElementById('tx-amount').value);
+  const category = document.getElementById('tx-category').value;
+  const desc     = document.getElementById('tx-desc').value.trim();
+  const notes    = document.getElementById('tx-notes').value.trim();
+  const type     = document.getElementById('tx-type').value;
+
+  if (!date || isNaN(amount) || amount <= 0 || !category || !desc) {
+    showToast('Please fill all required fields', 'error', 'fa-exclamation-circle'); return;
+  }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+  try {
+    const editId = document.getElementById('edit-id').value;
+    if (editId) {
+      await updateTxInFirestore(editId, { date, amount, category, description:desc, notes, type });
+      auditLogFirestore('edit', `Edited transaction "${desc}" (${fmt(amount)})`);
+      showToast('Transaction updated', 'success', 'fa-check-circle');
+    } else {
+      const tx = { id:uid(), date, amount, category, description:desc, notes, type, createdBy:state.currentUser.email, createdAt:new Date().toISOString() };
+      await saveTxToFirestore(tx);
+      auditLogFirestore('add', `Added ${type} "${desc}" (${fmt(amount)})`);
+      showToast('Transaction added', 'success', 'fa-check-circle');
+    }
+    closeModal('tx-modal');
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error', 'fa-times-circle');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Save';
+  }
+}
+
+function deleteTx(id) {
+  const t = state.transactions.find(x => x.id === id);
+  if (!t) return;
+  showConfirm(`Delete "${t.description}" (${fmt(t.amount)})?`, async () => {
+    try {
+      await deleteTxFromFirestore(id);
+      auditLogFirestore('delete', `Deleted transaction "${t.description}" (${fmt(t.amount)})`);
+      showToast('Transaction deleted', 'success', 'fa-trash');
+    } catch(e) {
+      showToast('Delete failed: ' + e.message, 'error', 'fa-times-circle');
+    }
+  });
+}
+
+function setType(type) {
+  document.getElementById('tx-type').value = type;
+  document.getElementById('btn-expense').className = 'type-btn' + (type==='expense'?' active-expense':'');
+  document.getElementById('btn-credit').className  = 'type-btn' + (type==='credit' ?' active-credit' :'');
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportCSV() {
+  const txs = yearTx();
+  if (!txs.length) { showToast('No transactions to export','warning','fa-exclamation'); return; }
+  const rows = txs.map(t=>`"${t.date}","${t.description}","${t.category}","${t.type}","${t.amount}","${t.notes||''}"`);
+  download(`yuvadeepti_${state.selectedYear}.csv`, 'Date,Description,Category,Type,Amount,Notes\n' + rows.join('\n'), 'text/csv');
+  auditLogFirestore('export', `Exported CSV for ${state.selectedYear}`);
+  showToast('CSV exported', 'success', 'fa-download');
+}
+
+function exportJSON() {
+  const data = { transactions:state.transactions, exportedAt:new Date().toISOString(), exportedBy:state.currentUser.email };
+  download('yuvadeepti_backup.json', JSON.stringify(data,null,2), 'application/json');
+  auditLogFirestore('export', 'Exported JSON backup');
+  showToast('JSON backup exported','success','fa-download');
+}
+
+function importJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.transactions) throw new Error('Invalid format');
+      showConfirm(`Import ${data.transactions.length} transactions? Duplicates will be skipped.`, async () => {
+        const existingIds = new Set(state.transactions.map(t=>t.id));
+        const newTxs = data.transactions.filter(t => !existingIds.has(t.id));
+        let count = 0;
+        for (const tx of newTxs) {
+          await saveTxToFirestore(tx);
+          count++;
+        }
+        auditLogFirestore('import', `Imported ${count} new transactions`);
+        showToast(`Imported ${count} new transactions`, 'success', 'fa-upload');
+      });
+    } catch(err) { showToast('Invalid JSON file', 'error', 'fa-times-circle'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function confirmClearAll() {
+  showConfirm('This will permanently delete ALL transactions from Firebase. Are you sure?', async () => {
+    try {
+      const snap = await db.collection('transactions').get();
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      auditLogFirestore('clear', 'Cleared all transactions');
+      showToast('All data cleared','success','fa-trash');
+    } catch(e) {
+      showToast('Clear failed: ' + e.message, 'error', 'fa-times-circle');
+    }
+  });
+}
+
+function download(filename, content, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download = filename;
+  a.click();
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) { if (e.target===this) this.classList.remove('open'); });
+});
+
+function showConfirm(msg, onOk) {
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-ok-btn').onclick = () => { closeModal('confirm-modal'); onOk(); };
+  openModal('confirm-modal');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type='info', icon='fa-info-circle') {
+  const tc = document.getElementById('toast-container');
+  const t  = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fas ${icon}"></i>${msg}`;
+  tc.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; t.style.transition='.3s ease'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+// ============================================================
+// FILTER SELECTS
+// ============================================================
+function buildFilterSelects() {
+  document.getElementById('tx-month-filter').innerHTML =
+    `<option value="">All Months</option>` + MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  buildCatFilter('tx-cat-filter', yearTx());
+}
+
+function buildCatFilter(selId, txs) {
+  const cats = [...new Set(txs.map(t=>t.category))].filter(Boolean).sort();
+  const sel  = document.getElementById(selId);
+  const cur  = sel.value;
+  sel.innerHTML = `<option value="">All Categories</option>` + cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+function auditLogFirestore(action, msg) {
+  saveAuditToFirestore({ action, msg, time: new Date().toLocaleString('en-IN',{hour12:false}) });
+}
+function auditLogLocal(action, msg) {
+  // For events before Firestore is ready (e.g. logout)
+  try { db.collection('auditLog').add({ action, msg, userEmail: state.currentUser?.email||'—', serverTime: firebase.firestore.FieldValue.serverTimestamp() }); } catch(e) {}
+}
+
+// ============================================================
+// YEAR SELECT — set to current year on load
+// ============================================================
+document.getElementById('year-select').value = state.selectedYear;
+</script>
+</body>
+</html>
